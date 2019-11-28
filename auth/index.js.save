@@ -1,0 +1,259 @@
+const app = require('express')();
+const bp = require('body-parser');
+var async = require("async");
+const port = 1000;
+const cors = require('cors');
+const multipart = require('multer')({ dest: 'uploads/' }).none();
+var WooCommerceAPI = require('woocommerce-api');
+var request = require('request');
+const Chatkit = require('@pusher/chatkit-server');
+const chatkit = new Chatkit.default({
+    instanceLocator: "v1:us1:fa7fa160-37b9-4758-92c5-d4e315975b86",
+    key: "62d605df-467d-4b63-a612-6bf0b261d379:h+KUmi4mVuSQhkjd3MmrXOgRYp7MsGXHpId2CnpE/1E=",
+  })
+var WooCommerce = new WooCommerceAPI({
+  url: 'https://market.tailorgang.io',
+  consumerKey: 'ck_c163fd514c079ff28da56c70ed31bd0b8b461928',
+  consumerSecret: 'cs_cde57b2d18bfa927dc88b1fadb34acac0033b3d5',
+  wpAPI: false,
+  version: 'v3'
+});
+
+var WooCommerce_v2 = new WooCommerceAPI({
+  url: 'https://market.tailorgang.io',
+  consumerKey: 'ck_c163fd514c079ff28da56c70ed31bd0b8b461928',
+  consumerSecret: 'cs_cde57b2d18bfa927dc88b1fadb34acac0033b3d5',
+  wpAPI: false,
+  version: 'v2'
+});
+
+app.use(cors());
+app.use(bp.json());
+app.use(bp.urlencoded({extended : true}));
+
+app.use(multipart);
+
+const baseRoutes = require('./routes/base');
+const passwordRoutes = require('./routes/password')
+const verificationRoutes = require('./routes/verification');
+const $u = require('./requesters/database.user');
+const tailorRoutes =  require('./routes/tailors');
+
+app.use(baseRoutes);
+app.use(tailorRoutes);
+
+app.use('/password', passwordRoutes);
+app.use('/verification', verificationRoutes);
+require('./responders/login')(1004);
+require('./publishers/auth.publisher');
+
+
+app.listen(port, () => {
+  console.log("Authentication App is online at port "+port);
+});
+
+app.get("/check", function(rea, resp, next){
+owner = req.query.owner;
+chatkit.getUserRooms({
+  userId: owner,
+})
+  .then((res) => {
+    consol(res);
+  }).catch((err) => {
+    console.log(err);
+  });
+});
+
+app.get("/woocommercereviews", function(req, resp, next){
+  let page_id = req.query.page_id;
+  fetchimage = function(review, callback){
+      req_email = review.reviewer_email != undefined? review.reviewer_email : "null@chi.com";
+      $u.User.findOne({email: req_email}).then(data_ => { picture = data_.pictureURL == undefined? null: data_.pictureURL; return callback(null,{id: review.id,name: data_.fullname, url: "https://ik.imagekit.io/nugitech/users/tr:h-100,w-100/"+picture}) });
+  }
+  WooCommerce.get('products/'+page_id+'/reviews', async function(err, data, res) {
+     reviews = JSON.parse(res).product_reviews;
+     async.map(reviews, fetchimage, function(err, results){ resp.json(results); });
+  });
+});
+
+app.get("/pusher", function(req, resp, next){
+  var Pusher = require('pusher');
+
+var pusher = new Pusher({
+  appId: '630662',
+  key: 'fee41021139793d229a6',
+  secret: '48d4478aa0174f3014eb',
+  cluster: 'eu',
+  encrypted: true
+});
+
+pusher.trigger('my-channel', 'my-event', {
+  "message": "hello world"
+});
+});
+
+app.post("/adduser", function(req, resp, next){
+id = req.body.id;
+name = req.body.name;
+picture = req.body.avatar == null? "https://ik.imagekit.io/nugitech/default_avatar__2__S1bznMELX.png" : "https://ik.imagekit.io/nugitech/users/tr:h-250,w-250/"+req.body.avatar;
+try{
+  chatkit.createUser({
+    id,
+    name,
+  }).then(() => {
+    chatkit.updateUser({
+      id,
+      name,
+      avatarURL: picture
+  }).then(() => {
+    resp.json({response: true});
+  }).catch((err) => {
+    if(err.error == "services/chatkit/user_already_exists"){
+      resp.json({response: true});
+    }
+    resp.json({err,id,picture,name});
+     });
+    }).catch((err) => {
+      if(err.error == "services/chatkit/user_already_exists"){
+        resp.json({response: true});
+     }
+     resp.json({err,id,picture,name});
+  });
+}catch(exception){
+  resp.json({response: false, exception});
+}
+});
+
+app.post("/createroom", function(req, resp, next){
+ creatorId = req.body.id;
+ name = req.body.name; 
+chatkit.createRoom({
+  creatorId,
+  name,
+})
+  .then(() => {
+    resp.json({response: true});
+  }).catch((err) => {
+    resp.json({err});
+  });
+});
+
+app.get("/woocommerceshipping", function(req, resp, next){
+ //let data_ = req.body.payload;
+ WooCommerce.get('products/shipping_classes', function(err, data, res) {
+  resp.json(JSON.parse(res));
+});
+/*WooCommerce.post('orders', data, function(err, data, res) {
+  resp.json(res);
+}); */
+});
+
+
+app.post("/woocommercesignup", function(req, resp, next){
+	let firstName = req.body.firstname;
+        let lastName =  req.body.lastname;
+	let email_ = req.body.email;
+	let password_ = req.body.password;
+	let phone_ = req.body.phone;
+	let country = req.body.country;
+	let extra = req.body.extra;
+	request.post(
+	  "https://v2.nugi-appservice-auth247.info/auth/signup?"+extra,
+	  {json: {email: email_, password: password_, fullname: firstName+" "+lastName, phone: phone_, rcountry: country}},
+	   function(error, response, body){
+		 user_exists = body.verification == undefined? true: JSON.parse(body.verification.status) == false? false: true;
+		   if(user_exists == false){
+				var data = {
+					customer: {
+					email: email_,
+					first_name: firstName,
+					last_name: lastName,
+					password: password_,
+					}
+				};
+				try{
+				  WooCommerce.post('customers', data, function(err, data, res) {
+				   //console.log(res);
+				   try{
+				     resp.json({response_: JSON.parse(res).customer.id > 0, body, data_: {id: JSON.parse(res).customer.id, cookie: "" }});
+				   }catch(error){
+				  WooCommerce.get('customers/email/'+email_, function(err, data, res_) {
+				     resp.json({response_: true, body, extra_: {email: "email already exists on shopping platform", response: JSON.parse(res)}, data_: {id: JSON.parse(res_).customer.id, cookie: "" }});
+				   });
+				   }
+				  });
+				}catch(error){ resp.json({response_: false, body: {email: "woocommerce error"}}); }
+	   	   }else{
+		  	resp.json({response_: false, body});
+	   	   }
+	});
+});
+
+app.get("/woocommerceremove", function(req, resp, next){
+  id = req.query.id;
+  WooCommerce.delete('customers/'+id+'?force=true', function(err, data, res) {
+    resp.json({user_id: ""+id, response: res});
+  });
+});
+
+app.post("/woocommercelogin", function(req, resp, next){
+global.user_exists = false;
+let email_ = req.body.email;                      //test value "cpo@nugitech.com";
+let password_ = req.body.password;                //test value "sundonahzora2011";
+let first_name_ = "";
+let last_name_ = "";
+let location = ""+req.body.location;
+request.post(
+    'https://v2.nugi-appservice-auth247.info/auth/login',
+    { json: { email: email_, password: password_, location } },
+    function (error, response, body) {
+        status = body.verification == undefined? false: JSON.parse(body.verification.status);
+        if(status){
+           first_name_ = body.fullname.split(" ")[0];
+           last_name_ = body.fullname.split(" ")[1];
+	   pictureURL = body.pictureURL;
+	   $u.Cart.findOne({ email: email_ }).then(data_ => {
+	   data = {wishListItems: [], cartItems: []};
+           try{
+             data = data_.data;
+           }catch(exception){ data = {wishListItems: [], cartItems: []} };
+           data == null? {wishListItems: [], cartItems: []}: data;
+	   let datax = {
+                    customer: {
+                    email: email_,
+                    first_name: first_name_,
+                    last_name: last_name_,
+                    password: password_,
+		    },
+		    body,
+		    items: data,
+		}
+		
+           WooCommerce.get('customers/email/'+email_, function(err, data, res) {
+              global.user_exists = JSON.parse(res).errors == undefined? JSON.parse(res).customer.id > 0 : false;
+              if(!global.user_exists){
+                 var data = {
+                    customer: {
+                    email: email_,
+                    first_name: first_name_,
+                    last_name: last_name_,
+                    password: password_,
+                    }
+                };
+                WooCommerce.post('customers', data, function(err, dat, res) {
+                   //console.log(res);
+		   resp.json({response_: JSON.parse(res).customer.id > 0, post_data: datax, data_: {id: JSON.parse(res).customer.id, cookie: "" }});
+                });
+              }else{
+		resp.json({response_: "true", post_data: datax, data_: {id: JSON.parse(res).customer.id, cookie: "" }});
+	      }
+	    });
+           });
+           //console.log(status);
+        }else{
+           resp.json({response_: "false", body});
+           //console.log(JSON.parse(body));
+        }
+    });
+});
+

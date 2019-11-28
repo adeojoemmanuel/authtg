@@ -1,0 +1,51 @@
+Arguments: 
+  /usr/local/bin/node /srv/users/tailorgang-production-user-admin/.yarn/bin/yarn.js add expo-server-sdk
+
+PATH: 
+  /srv/users/tailorgang-production-user-admin/bin:/srv/users/tailorgang-production-user-admin/.local/bin:/srv/users/tailorgang-production-user-admin/.yarn/bin:/srv/users/tailorgang-production-user-admin/.config/yarn/global/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+
+Yarn version: 
+  1.10.1
+
+Node version: 
+  8.9.4
+
+Platform: 
+  linux x64
+
+Trace: 
+  Error: EACCES: permission denied, unlink '/srv/users/tailorgang-production-user-admin/apps/nugi-tailorgang-app-services-2/public/auth/node_modules/buffer-from/LICENSE'
+
+npm manifest: 
+  {
+    "name": "auth",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "Tailorgang Nugitech Developers",
+    "license": "ISC",
+    "dependencies": {
+      "@pusher/chatkit-server": "^0.12.2",
+      "async": "^2.6.1",
+      "axon": "^2.0.3",
+      "body-parser": "^1.18.3",
+      "celebrate": "^8.0.0",
+      "cors": "^2.8.4",
+      "express": "^4.16.3",
+      "express-async-handler": "^1.1.3",
+      "joi": "^13.4.0",
+      "jsonwebtoken": "^8.3.0",
+      "multer": "^1.3.1",
+      "pusher": "^2.1.3",
+      "woocommerce-api": "^1.4.2"
+    }
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile

@@ -1,0 +1,25 @@
+{
+  "name": "woocommerce",
+  "version": "1.0.0",
+  "description": "Woo commerce Package for tailorgang",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "woocommerce",
+    "tailorgang"
+  ],
+  "author": "Nugitech dev team",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "axon": "^2.0.3",
+    "body-parser": "^1.18.3",
+    "cors": "^2.8.4",
+    "express": "^4.16.3",
+    "joi": "^13.5.2",
+    "multer": "^1.3.1",
+    "woocommerce-api": "^1.4.2"
+  }
+}
